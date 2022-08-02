@@ -1,5 +1,6 @@
 name: Build Twitter Sampled Stream Demo
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
