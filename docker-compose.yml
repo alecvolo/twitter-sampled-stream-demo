@@ -1,0 +1,16 @@
+version: '3.4'
+
+services:
+  streamingdemo-api:
+    image: ${DOCKER_REGISTRY-}streamingdemoapi
+    build:
+      context: .
+      dockerfile: src/Services/StreamingDemo.Api/Dockerfile
+
+  streamingdemo-web:
+    image: ${DOCKER_REGISTRY-}streamingdemoweb
+    build:
+      context: .
+      dockerfile: src/Web/StreamingDemo.Web/Dockerfile
+    depends_on:
+      - streamingdemo-api

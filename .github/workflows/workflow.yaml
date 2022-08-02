@@ -1,0 +1,27 @@
+name: Build Twitter Sampled Stream Demo
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '*.md'
+env:
+  APPNAME: TwitterSampledStreamDemo
+  APPLICATIONPATH: src
+
+jobs:
+  build:
+    name: Build and push application to ACR
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@main
+
+    - name: Build and Run unit tests 
+      run: | 
+            dotnet restore TwitterStreamingDemo.sln
+            dotnet build  TwitterStreamingDemo.sln  --configuration Release
+            dotnet test src/Services/StreamingDemo.Api.Tests/StreamingDemo.Api.Tests.csproj  --verbosity normal
+            dotnet test src/Services/StreamingDemo.Api.IntegrationTests/StreamingDemo.Api.IntegrationTests.csproj  --verbosity normal
+      env: 
+        TwitterBearerToken: ${{ secrets.TWITTERBEARERTOKEN }}
+        Twitter__BearerToken: ${{ secrets.TWITTERBEARERTOKEN }}
