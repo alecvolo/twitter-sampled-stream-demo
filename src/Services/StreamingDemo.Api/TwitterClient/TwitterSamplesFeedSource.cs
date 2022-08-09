@@ -19,6 +19,8 @@ public class TwitterSamplesFeedSource : ITwitterSamplesFeed
     }
     public async IAsyncEnumerable<Tweet> GetTweetsAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        using var internalTokenSource = new CancellationTokenSource(TimeSpan.FromMinutes(12));
+
         var request = new HttpRequestMessage(HttpMethod.Get, "?tweet.fields=created_at,entities");
         var context = new Polly.Context().WithLogger<TwitterSamplesFeedSource>(_logger);
         request.SetPolicyExecutionContext(context);
@@ -32,11 +34,22 @@ public class TwitterSamplesFeedSource : ITwitterSamplesFeed
                 //    await client.GetStreamAsync("?tweet.fields=created_at,entities", cancellationToken);
                 using var reader = new StreamReader(stream);
                 _logger.LogInformation("Connected to the twitter's stream");
-                while (!reader.EndOfStream && !cancellationToken.IsCancellationRequested)
+                while ( !cancellationToken.IsCancellationRequested)
                 {
-
-                    //We are ready to read the stream
+                    //stream.Close if no data in 2 minutes
+                    var cancellationTokenRegistration = internalTokenSource.Token.Register(() =>
+                    {
+                        _logger.LogInformation("time out - closing stream");
+                        stream?.Close();
+                    });
+                    if (reader.EndOfStream || cancellationToken.IsCancellationRequested)
+                    {
+                        await cancellationTokenRegistration.DisposeAsync();
+                        break;
+                    }
+                   //We are ready to read the stream
                     var currentLine = await reader.ReadLineAsync();
+                    await cancellationTokenRegistration.DisposeAsync();
                     var jsonObject = ParseJsonObject(currentLine);
                     //todo check for errors
                     var tweet = jsonObject?["data"]?.Deserialize<Tweet>();

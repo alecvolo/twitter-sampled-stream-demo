@@ -18,6 +18,7 @@ namespace StreamingDemo.Api.RankedHashtags.Services
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _logger.LogInformation("Tweets counting service has started");
+            var exceptionCounter = 0;
             while (!stoppingToken.IsCancellationRequested)
             {
                 try
@@ -26,7 +27,8 @@ namespace StreamingDemo.Api.RankedHashtags.Services
                     var internalToken = internalTokenSource.Token;
                     using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(internalToken, stoppingToken);
                         await foreach (var tweet in _source.GetTweetsAsync(linkedCts.Token))
-                    {
+                        {
+                            exceptionCounter = 0;
                         try
                         {
                             await _projector.ProjectAsync(tweet, linkedCts.Token);
@@ -40,6 +42,14 @@ namespace StreamingDemo.Api.RankedHashtags.Services
                 catch (Exception e)
                 {
                     _logger.LogError(e, "Something wrong with the Twitter");
+                    if (exceptionCounter < 6)
+                    {
+                        exceptionCounter++;
+                    }
+
+                    var delay = 1 << exceptionCounter;
+                    _logger.LogWarning("Delaying for {delay} seconds before re-try", delay);
+                    await Task.Delay(TimeSpan.FromSeconds(delay), stoppingToken);
                 }   
             }
             _logger.LogInformation("Tweets counting service has stopped");
