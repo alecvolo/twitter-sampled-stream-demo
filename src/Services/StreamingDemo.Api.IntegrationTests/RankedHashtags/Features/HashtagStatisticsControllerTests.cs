@@ -13,7 +13,7 @@ public class HashtagStatisticsControllerTests: IntegrationTest
     {
     }
     [Fact()]
-    public async Task Should_Update_Airport()
+    public async Task Should_Get_Stats()
     {
         await Task.Delay(TimeSpan.FromSeconds(10)); // to collect some data
         var data = await Client.GetFromJsonAsync<TweetsStatistics>($"{ApiUrl}/top-hashtags");

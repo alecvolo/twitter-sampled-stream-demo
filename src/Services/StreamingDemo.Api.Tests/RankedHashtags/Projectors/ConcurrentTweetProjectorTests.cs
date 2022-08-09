@@ -37,7 +37,7 @@ public class ConcurrentTweetProjectorTests : TweetProjectorTestsBase
         await ProjectAsync(new ConcurrentTweetProjector());
     }
     [Fact()]
-    public async Task ConcurrentDictionary_ToArray_Test()
+    public void ConcurrentDictionary_ToArray_Test()
     {
         //https://stackoverflow.com/questions/29648849/net-concurrentdictionary-toarray-argumentexception
         var ulongs = new ConcurrentDictionary<ulong, ulong>();
