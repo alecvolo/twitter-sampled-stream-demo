@@ -40,6 +40,12 @@
         console.log('Registered to @Settings.Value.SignalrHubUrl');
     });
 
+    function setTextContent(node, text) {
+        if (node != null && node.textContent !== text) {
+            node.textContent = text;
+        }
+    }
+
     connection.on("Show", function (count, tags) {
         //console.log(count, tags);
         document.getElementById("tweetsCounter").textContent = count.toLocaleString();
@@ -47,8 +53,8 @@
         var liItems = topTenList.querySelectorAll("li");
         for (var i = 0; i < tags.length; i++) {
             if (liItems.length > i) {
-                liItems[i].childNodes[0].textContent = "#"+tags[i].tag;
-                liItems[i].childNodes[1].textContent = tags[i].count.toLocaleString();
+                setTextContent(liItems[i].childNodes[0], "#"+tags[i].tag);
+                setTextContent(liItems[i].childNodes[1], tags[i].count.toLocaleString());
             } else {
                 var li = document.createElement("li");
                 li.className = "list-group-item d-flex justify-content-between align-items-center";
