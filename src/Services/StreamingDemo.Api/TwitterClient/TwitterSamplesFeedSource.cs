@@ -19,47 +19,48 @@ public class TwitterSamplesFeedSource : ITwitterSamplesFeed
     }
     public async IAsyncEnumerable<Tweet> GetTweetsAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        using var internalTokenSource = new CancellationTokenSource(TimeSpan.FromMinutes(12));
-
         var request = new HttpRequestMessage(HttpMethod.Get, "?tweet.fields=created_at,entities");
         var context = new Polly.Context().WithLogger<TwitterSamplesFeedSource>(_logger);
         request.SetPolicyExecutionContext(context);
         while (!cancellationToken.IsCancellationRequested)
         {
-                _logger.LogInformation("Connecting to the twitter's stream");
-                var client = _clientFactory.CreateClient("Twitter");
-                var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-                response.EnsureSuccessStatusCode();
-                await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-                //    await client.GetStreamAsync("?tweet.fields=created_at,entities", cancellationToken);
-                using var reader = new StreamReader(stream);
-                _logger.LogInformation("Connected to the twitter's stream");
-                while ( !cancellationToken.IsCancellationRequested)
+            _logger.LogInformation("Connecting to the twitter's stream");
+            var client = _clientFactory.CreateClient("Twitter");
+            var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            response.EnsureSuccessStatusCode();
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            //    await client.GetStreamAsync("?tweet.fields=created_at,entities", cancellationToken);
+            using var reader = new StreamReader(stream);
+            _logger.LogInformation("Connected to the twitter's stream");
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                //close stream if no data in 12 minutes
+                var internalTokenSource = new CancellationTokenSource(TimeSpan.FromMinutes(12));
+                var cancellationTokenRegistration = internalTokenSource.Token.Register(() =>
                 {
-                    //stream.Close if no data in 2 minutes
-                    var cancellationTokenRegistration = internalTokenSource.Token.Register(() =>
-                    {
-                        _logger.LogInformation("time out - closing stream");
-                        stream?.Close();
-                    });
-                    if (reader.EndOfStream || cancellationToken.IsCancellationRequested)
-                    {
-                        await cancellationTokenRegistration.DisposeAsync();
-                        break;
-                    }
-                   //We are ready to read the stream
-                    var currentLine = await reader.ReadLineAsync();
+                    _logger.LogInformation("time out - closing stream");
+                    stream?.Close();
+                });
+                if (reader.EndOfStream || cancellationToken.IsCancellationRequested)
+                {
                     await cancellationTokenRegistration.DisposeAsync();
-                    var jsonObject = ParseJsonObject(currentLine);
-                    //todo check for errors
-                    var tweet = jsonObject?["data"]?.Deserialize<Tweet>();
-                    if (tweet != null)
-                    {
-                        //https://github.com/dotnet/csharplang/discussions/765
-                        yield return tweet;
-                    }
+                    break;
                 }
-                _logger.LogInformation("Got disconnecting from the twitter's stream");
+                //We are ready to read the stream
+                var currentLine = await reader.ReadLineAsync();
+                await cancellationTokenRegistration.DisposeAsync();
+                //actually, you have to dispose the token source, see https://stackoverflow.com/a/21653382/12894509
+                internalTokenSource.Dispose();
+                var jsonObject = ParseJsonObject(currentLine);
+                //todo check for errors
+                var tweet = jsonObject?["data"]?.Deserialize<Tweet>();
+                if (tweet != null)
+                {
+                    //https://github.com/dotnet/csharplang/discussions/765
+                    yield return tweet;
+                }
+            }
+            _logger.LogInformation("Got disconnecting from the twitter's stream");
         }
     }
     public JsonObject? ParseJsonObject(string? json)
