@@ -5,24 +5,43 @@ on:
     branches:
       - main
     paths-ignore:
-      - '*.md'
-env:
-  APPNAME: TwitterSampledStreamDemo
-  APPLICATIONPATH: src
-
+      - '**.md'
+      - '.github/**.yml'
+      - '.github/**.yaml'
 jobs:
   build:
-    name: Build and push application to ACR
+    name: Build and Run unit tests
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@main
-
-    - name: Build and Run unit tests 
-      run: | 
-            dotnet restore TwitterStreamingDemo.sln
-            dotnet build  TwitterStreamingDemo.sln  --configuration Release
-            dotnet test src/Services/StreamingDemo.Api.Tests/StreamingDemo.Api.Tests.csproj  --verbosity normal
-            dotnet test src/Services/StreamingDemo.Api.IntegrationTests/StreamingDemo.Api.IntegrationTests.csproj  --verbosity normal
+    - name: Install dependencies
+      run: dotnet restore TwitterStreamingDemo.sln
+    - name: Build
+      run: dotnet build  TwitterStreamingDemo.sln  --configuration Release --no-restore
+    - name: Run unit tests
+      id: unit-test
+      run: dotnet test src/Services/StreamingDemo.Api.Tests/StreamingDemo.Api.Tests.csproj  --no-restore --verbosity normal --logger "trx" --results-directory "TestResults"
       env: 
-        TwitterBearerToken: ${{ secrets.TWITTERBEARERTOKEN }}
-        Twitter__BearerToken: ${{ secrets.TWITTERBEARERTOKEN }}
+        TwitterBearerToken: ${{ secrets.TWITTER_BEARER_TOKEN }}
+      continue-on-error: true
+    - name: Run integration tests
+      id: integration-test
+      if: success() 
+      run: dotnet test src/Services/StreamingDemo.Api.IntegrationTests/StreamingDemo.Api.IntegrationTests.csproj  --no-restore --verbosity normal --logger "trx" --results-directory "IntegrationTestsResults"
+      env: 
+        Twitter__BearerToken: ${{ secrets.TWITTER_BEARER_TOKEN }}
+      continue-on-error: true
+    - name: Create unit tests report
+      uses: dorny/test-reporter@v1
+      if: steps.unit-test.conclusion != 'skipped' 
+      with:
+          name: Report of Unit Tests
+          path: TestResults/*.trx
+          reporter: dotnet-trx
+    - name: Create integration test report
+      uses: dorny/test-reporter@v1
+      if: steps.integration-test.conclusion != 'skipped' 
+      with:
+          name: Report of Integration Tests
+          path: IntegrationTestsResults/*.trx
+          reporter: dotnet-trx

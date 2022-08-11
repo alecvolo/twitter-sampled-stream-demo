@@ -1,0 +1,57 @@
+name: Deploy to Heroku
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - run: |
+          git fetch --tags --unshallow
+
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v0.9.7
+        with:
+          versionSpec: '5.x'
+
+      - name: Determine Version
+        id:   gitversion
+        uses: gittools/actions/gitversion/execute@v0.9.7
+
+      - name: Get current date
+        id: date
+        run: echo "::set-output name=date::$(date +'%Y-%m-%d')"
+
+      - name: Make envfile
+        uses: SpicyPizza/create-envfile@v1.3
+#        with:
+#           envkey_BUILD_VERSION: ${{ steps.gitversion.outputs.fullSemVer }}
+
+      - name: Build, Push and Deploy to Heroku #set the whatever name you want to this step
+        id: heroku
+        uses: snithyanantham/docker-compose-multiple-apps-heroku-deploy@v1.0  # use the latest version of the action
+        with:
+          email: ${{ secrets.HEROKU_EMAIL }} # your heroku email
+          api_key: ${{ secrets.HEROKU_API_KEY }} # your  heroku api key
+          docker_compose_file: './docker-compose.heroku.yml' # set the path to the folder where the docker-compose file is located
+          heroku_apps: '[{"imagename":"streamingdemo.api","appname":"twitter-sampled-stream-api","apptype":"web"},{"imagename":"streamingdemo.web","appname":"twitter-sampled-stream-web","apptype":"web"}]' # List of Docker Image name, Heroku app and Heroku app type      - name: Checkout to the branch
+        env:
+          BUILD_VERSION:  ${{ steps.gitversion.outputs.fullSemVer }}
+          API_TWITTER_BEARER_TOKEN: ${{ secrets.TWITTER_BEARER_TOKEN }}
+          API_BASE_URL: https://twitter-sampled-stream-api.herokuapp.com
+          PORT-WEB: 80
+          PORT-API: 80
+      - name: Release snapshot
+        id: release-snapshot
+        uses: actions/create-release@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: heroku-${{ steps.date.outputs.date }}
+          release_name: heroku-${{ steps.date.outputs.date }}
+          draft: false
+          prerelease: false

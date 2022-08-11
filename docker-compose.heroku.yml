@@ -6,7 +6,12 @@ services:
     build:
       context: .
       dockerfile: src/Services/StreamingDemo.Api/Dockerfile
-
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://*:${PORT-API}
+      - Twitter__BearerToken=${API_TWITTER_BEARER_TOKEN}
+    ports:
+     - 80
   streamingdemo-web:
     image: ${DOCKER_REGISTRY-}streamingdemo.web:${TAG:-latest}
     build:
@@ -14,3 +19,9 @@ services:
       dockerfile: src/Web/StreamingDemo.Web/Dockerfile
     depends_on:
       - streamingdemo-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://*:${PORT-WEB}
+      - SignalrHubUrl=${API_BASE_URL}/hubs/hashtags
+    ports:
+     - 80

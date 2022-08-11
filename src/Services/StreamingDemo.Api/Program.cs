@@ -105,6 +105,12 @@ builder.Host.UseSerilog((context, services, configuration) => configuration
     .WriteTo.Console());
 
 var app = builder.Build();
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrWhiteSpace(port))
+{
+    Log.Logger.Information($"assigned port={port}");
+    app.Urls.Add("http://*:" + port);
+}
 
 // Configure the HTTP request pipeline.
 //if (app.Environment.IsDevelopment())  // in prod too
