@@ -46,7 +46,7 @@ namespace StreamingDemo.Api.Tests.RankedHashtags.Projectors
                     return 1;
                 });
             redis.Setup(m => m.SortedSetRangeByScoreWithScores(It.IsAny<RedisKey>(), It.IsAny<double>(), It.IsAny<double>(),
-                    It.IsAny<Exclude>(), Order.Descending, 0L, -1L, CommandFlags.None))
+                    It.IsAny<Exclude>(), Order.Descending, 0L, 10L, CommandFlags.None))
                 .Returns( (RedisKey _, double _, double _, Exclude _, Order _, long _, long _, CommandFlags _) =>
                     tweetProjector.CurrentStatistics.TopHashtags.Select(t=>new SortedSetEntry(t.Tag, t.Count)).ToArray()
                 );
