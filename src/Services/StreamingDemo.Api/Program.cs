@@ -8,6 +8,7 @@ using Polly;
 using Polly.Extensions.Http;
 using Serilog;
 using Serilog.Events;
+using StackExchange.Redis;
 using StreamingDemo.Api;
 using StreamingDemo.Api.Infrastructure;
 using StreamingDemo.Api.Publisher.Features;
@@ -45,7 +46,6 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddMediatR(typeof(Program).GetTypeInfo().Assembly);
 
-var projector = new ConcurrentTweetProjector();
 builder.Services.AddHttpClient("Twitter", client =>
     {
         var twitterOptions = new TwitterOptions();
@@ -67,8 +67,6 @@ builder.Services.AddHttpClient("Twitter", client =>
             })
     );
 
-builder.Services.AddSingleton<ITweetsStatisticsStore>(p => projector);
-builder.Services.AddSingleton<ITweetProjector>(p => projector);
 
 builder.Services.AddSingleton<ITwitterSamplesFeed, TwitterSamplesFeedSource>();
 
@@ -84,6 +82,25 @@ builder.Services.AddProblemDetails(options =>
     };
 
 });
+
+if ("redis".Equals(builder.Configuration["Projector"], StringComparison.CurrentCultureIgnoreCase))
+{
+    var redisConnectionString = builder.Configuration["Redis:ConnectionString"];
+    if (string.IsNullOrWhiteSpace(redisConnectionString))
+    {
+
+    }
+
+    builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnectionString));
+    builder.Services.AddSingleton<ITweetsStatisticsProcessor, RedisTweetProjector>();
+}
+else
+{
+    builder.Services.AddSingleton<ITweetsStatisticsProcessor, ConcurrentTweetProjector>();
+}
+builder.Services.AddSingleton<ITweetsStatisticsStore>(sp => sp.GetRequiredService<ITweetsStatisticsProcessor>());
+builder.Services.AddSingleton<ITweetProjector>(sp => sp.GetRequiredService<ITweetsStatisticsProcessor>());
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddSwaggerGen();
 
