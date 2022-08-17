@@ -8,8 +8,8 @@ stream. The app consumes this sample stream and keeps track of the following:
 * Top 10 Hashtags
 
 The app has two parts:
-* Backend - collects information about tweets, implemented as REST API ([live demo](https://twitterstreamingdemo-api.victoriousisland-268f5351.eastus.azurecontainerapps.io/swagger/index.html))
-* Frontend - displays current statistics of the tweets, implemented as MVC Web app ([live demo](https://twitterstreamingdemo-web.victoriousisland-268f5351.eastus.azurecontainerapps.io/))
+* Backend - collects information about tweets, implemented as REST API ([live demo](https://twitter-sampled-stream-api.herokuapp.com/swagger/index.html))
+* Frontend - displays current statistics of the tweets, implemented as MVC Web app ([live demo](https://twitter-sampled-stream-web.herokuapp.com/))
 
 To run, replace the value of Twitter's BearerToken on yours in 'appsetting.json':
 ```json
